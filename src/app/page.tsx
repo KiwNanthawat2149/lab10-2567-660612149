@@ -1,78 +1,66 @@
 "use client";
-import Footer from "@components/Footer";
-import Header from "@components/Header";
-import Task from "@components/Task";
-import TaskInput from "@components/TaskInput";
-import { nanoid } from "nanoid";
+
+import axios from "axios";
+import { cleanUser } from "@/libs/cleanUser";
 import { useState } from "react";
+import UserCard from "@/components/UserCard";
+import { UserCardProps } from "@/libs/types";
 
-export default function Home() {
-  // Define the interface of task-item object
-  interface TaskItem{
-    id: string;
-    title: string;
-    completed: boolean;
-  };
+export default function RandomUserPage() {
+  // annotate type for users state variable
+  const [users, setUsers] = useState<UserCardProps[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [genAmount, setGenAmount] = useState<number>(1);
 
-  // useState hook for an array of task-item objects
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const generateBtnOnClick = async () => {
+    setIsLoading(true);
+    try {
+      const resp = await axios.get(
+        `https://randomuser.me/api/?results=${genAmount}`
+      );
 
-  // Define the function with proper type
-  const addTask = (newTaskTitle: string) => {
-    const newTask = { id: nanoid(), title: newTaskTitle, completed: false };
-    const newTasks = [...tasks, newTask];
-    setTasks(newTasks);
-  };
+      const fetchedUsers = resp.data.results;
 
-  // Define the function with proper type
-  const deleteTask = (taskId: string) => {
-    const newTasks = tasks.filter((task) => task.id !== taskId);
-    setTasks(newTasks);
-  };
-
-  // Define the function with proper type
-  const toggleDoneTask = (taskId: string) => {
-    //structuredClone will copy an array or an object "deeply"
-    //So objects within an object will be copied too
-    const newTasks = structuredClone(tasks);
-    //search for a task based on condition
-    const task = newTasks.find((x) => x.id === taskId);
-    if(task){
-      task.completed = !task.completed;
-      setTasks(newTasks);
-    };
-
+      //Your code here
+      const cleanedUsers = fetchedUsers.map((user: any) => cleanUser(user));
+      setUsers(cleanedUsers);
+    } catch(error) {
+        console.error('Error fetching or processing data:', error);
+    } finally {
+        setIsLoading(false);
+    }
+    //Process result from api response with map function. Tips use function from /src/libs/cleanUser
+    //Then update state with function : setUsers(...)
   };
 
   return (
-    // Main container
-    <div className="container mx-auto">
-      {/* header section */}
-      <Header />
-      {/* tasks container */}
-      <div style={{ maxWidth: "400px" }} className="mx-auto">
-        {/* Task summary */}
-        <p className="text-center text-secondary fst-italic">
-          All ({tasks.length}) Done ({tasks.filter((task) => task.completed).length})
-        </p>
-        {/* task input */}
-        <TaskInput addTaskFunc={addTask} />
-
-        {/* tasks mapping*/}
-        {tasks.map((task) => (
-          <Task
-            id={task.id}
-            title={task.title}
-            deleteTaskFunc={deleteTask}
-            toggleDoneTaskFunc={toggleDoneTask}
-            completed={task.completed}
-            key={task.id}
-          />
-        ))}
+    <div style={{ maxWidth: "700px" }} className="mx-auto">
+      <p className="display-4 text-center fst-italic m-4">Users Generator</p>
+      <div className="d-flex justify-content-center align-items-center fs-5 gap-2">
+        Number of User(s)
+        <input
+          className="form-control text-center"
+          style={{ maxWidth: "100px" }}
+          type="number"
+          onChange={(e) => setGenAmount(Number(e.target.value))}
+          value={genAmount}
+        />
+        <button className="btn btn-dark" onClick={generateBtnOnClick}>
+          Generate
+        </button>
       </div>
-
-      {/* //footer section */}
-      <Footer year="2024" fullName="Natchanan Phattarapraditkul" studentId="660612143" />
+      {isLoading && (
+        <p className="display-6 text-center fst-italic my-4">Loading ...</p>
+      )}
+      {users.map((user) => (
+        <UserCard
+          key={user.email}
+          name={user.name}
+          email={user.email}
+          imgUrl={user.imgUrl}
+          address={user.address}
+        />
+      ))}
     </div>
   );
 }
